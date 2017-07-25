@@ -48,3 +48,18 @@ func CreateGenesisBlock() (*Block, error) {
 	genBlock.Hash = h
 	return genBlock, nil
 }
+
+func (b Block) NextBlock() (*Block, error) {
+	newBlock := &Block{
+		Index:        b.Index + 1,
+		Timestamp:    time.Now(),
+		Data:         []byte(fmt.Sprintf("Hey! I'm block %d", b.Index+1)),
+		PreviousHash: b.Hash,
+	}
+	h, err := newBlock.MakeHash()
+	if err != nil {
+		return nil, err
+	}
+	newBlock.Hash = h
+	return newBlock, nil
+}
