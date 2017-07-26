@@ -1,8 +1,8 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 type Transaction struct {
@@ -12,7 +12,11 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return fmt.Sprintf("From: %s\nTo: %s\nAmount: %d\n", t.From, t.To, t.Amount)
+	jsonTx, err := json.Marshal(&t)
+	if err != nil {
+		return "bad txion"
+	}
+	return string(jsonTx)
 }
 
 func (t *Transaction) Validate() error {

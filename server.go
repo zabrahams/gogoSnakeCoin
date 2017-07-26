@@ -8,15 +8,17 @@ import (
 )
 
 type Server struct {
-	txions []*Transaction
+	Node Node
 }
 
 func (s *Server) Start(port string) {
-	http.HandleFunc("/txions", s.createTxionHandler)
+	http.HandleFunc("/txions", s.txionHandler)
+	http.HandleFunc("/mine", s.mineHandler)
+	http.HandleFunc("/blockchain", s.blockchainHandler)
 	http.ListenAndServe(":"+port, nil)
 }
 
-func (s *Server) createTxionHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) txionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		newTxion := Transaction{}
@@ -26,30 +28,59 @@ func (s *Server) createTxionHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("error reading request body: %+v\n", err.Error())
 			http.Error(w, "500 problem reading json body", 500)
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		err = json.Unmarshal(rawJson, &newTxion)
 		if err != nil {
 			fmt.Printf("error processing json: %+v\n", err.Error())
-			http.Error(w, "400 bad request - invalid json body", 400)
+			http.Error(w, "400 bad request - invalid json body", http.StatusBadRequest)
 			return
 		}
 
 		err = newTxion.Validate()
 		if err != nil {
 			fmt.Println("error validating json")
-			http.Error(w, "400 bad request - invalid json body", 400)
+			http.Error(w, "400 bad request - invalid json body", http.StatusBadRequest)
 			return
 		}
 
-		s.txions = append(s.txions, &newTxion)
-		fmt.Println("New Transaction Added:")
-		fmt.Print(newTxion.String())
+		s.Node.Transactions = append(s.Node.Transactions, newTxion)
+		fmt.Println("{{{--- New Transaction Added ---}}}")
+		fmt.Print(newTxion.String() + "\n")
 		w.WriteHeader(http.StatusCreated)
 	default:
-		w.Write([]byte("404 page not found"))
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "404 page not found", http.StatusNotFound)
+	}
+}
+
+func (s *Server) mineHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if err := s.Node.Mine(); err != nil {
+			w.Write([]byte("mining failure"))
+		}
+		fmt.Println("{{{--- New Block Mined ---}}}")
+		fmt.Print(s.Node.Blockchain[len(s.Node.Blockchain)-1])
+		return
+	default:
+		http.Error(w, "404 page not found", http.StatusNotFound)
+		return
+	}
+}
+
+func (s *Server) blockchainHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		jsonChain, err := json.Marshal(s.Node.Blockchain)
+		if err != nil {
+			http.Error(w, "502 problem rendering blockchain", http.StatusInternalServerError)
+			return
+		}
+		w.Write(jsonChain)
+		return
+	default:
+		http.Error(w, "404 page not found", http.StatusNotFound)
+		return
 	}
 }

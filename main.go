@@ -6,7 +6,17 @@ import (
 )
 
 func main() {
-	serv := &Server{}
+	genBlock, err := CreateGenesisBlock()
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+	node := Node{
+		Address:    "testaddress",
+		Blockchain: []Block{genBlock},
+	}
+	serv := &Server{
+		Node: node,
+	}
 	serv.Start("8080")
 }
 
@@ -17,9 +27,9 @@ func genSimpleChain() {
 	}
 
 	fmt.Println("Genesis Block Created:")
-	blockchain := []*Block{genBlock}
+	blockchain := []Block{genBlock}
 	for i := 0; i <= 20; i += 1 {
-		newBlock, err := blockchain[i].NextBlock()
+		newBlock, err := blockchain[i].NextBlock(1, []Transaction{})
 		if err != nil {
 			log.Fatalf("uh oh - problem building block chain: %+v", err)
 		}
