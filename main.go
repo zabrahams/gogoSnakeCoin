@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 )
 
 func main() {
+	setupWallet()
 	genBlock, err := CreateGenesisBlock()
 	if err != nil {
 		log.Fatalf("%+v", err)
@@ -18,6 +20,24 @@ func main() {
 		Node: node,
 	}
 	serv.Start("8080")
+}
+
+func setupWallet() {
+	db, err := sql.Open("sqlite3", "./keys.db")
+	if err != nil {
+		log.Panic("Couldn't connect to wallet db")
+	}
+	keyRepo := SQLiteKeyRepo{
+		DB: db,
+	}
+	keyRepo.PrepDB()
+	wallet := Wallet{
+		KeyRepo: &keyRepo,
+	}
+	_, err = wallet.GenerateKey()
+	if err != nil {
+		log.Panic("couldn't generate test key")
+	}
 }
 
 func genSimpleChain() {
